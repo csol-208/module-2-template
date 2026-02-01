@@ -65,7 +65,7 @@ joined = points.join(polygons, points.geom.within(polygons.geom))
 ```
 
 **Common Pitfalls & Fixes:**
-*   **Lazy Evaluation**: Ibis uses lazy evaluation - operations build a query plan without executing. Use `.execute()` to materialize results as a Python value or pandas DataFrame. This applies to all operations including `count()`, aggregations, and table operations.
+*   **Lazy Evaluation**: Ibis uses lazy evaluation. Use `.execute()` to materialize results (e.g., `dcs.count().execute()`). This is essential to see values rather than expression plans.
 *   **Parquet/Spatial Schema**: Loading Parquet files with geometry via `ibis.read_parquet` may result in binary/blob columns. To ensure DuckDB's spatial extension correctly infers `geometry` type:
 
     ```python
@@ -74,46 +74,50 @@ joined = points.join(polygons, points.geom.within(polygons.geom))
     table = con.sql("SELECT * FROM read_parquet('data.parquet')")
     ```
 
+*   **SVI Data Cleaning**: Always drop negative values from SVI columns before analysis: `svi = svi.filter(_.RPL_THEMES >= 0)`.
+
 *   **Sorting**: Use `.order_by()` instead of the deprecated `.sort_by()`.
 
 ### Visualization: AnyMap & Altair
 *   **Vector Data (Maps)**: Use **anymap** with maplibre backend for interactive maps of points/polygons.
 *   **Statistical Plots**: Use **altair** for charts (bar, scatter, line).
 
-**AnyMap Example:**
+**AnyMap Example (Vector & PMTiles):**
 ```python
 from anymap import Map
 import geopandas as gpd
 
-# Create a map with maplibre backend
+# Create a map
 m = Map(center=[-98, 39], zoom=4, height="600px")
 
-# Add vector data (points or polygons) from GeoDataFrame or GeoJSON
-# Convert ibis table to GeoDataFrame first
-points_gdf = points_ibis_table.to_pandas()
+# 1. Add Vector Data (e.g. Points)
+# Always use .execute() to materialize Ibis data for GeoPandas
+points_gdf = points_ibis_table.execute()
 points_gdf = gpd.GeoDataFrame(points_gdf, geometry='geometry', crs='EPSG:4326')
 
-# Add as a layer with styling
 m.add_vector(
     points_gdf,
     layer_type="circle",
-    paint={
-        "circle-radius": 8,
-        "circle-color": "#ff0000"
-    },
+    paint={"circle-radius": 8, "circle-color": "#ff0000"},
     name="points"
 )
 
-# For polygons, similarly use add_vector
-m.add_vector(
-    polygons_gdf,
-    layer_type="fill",
-    paint={
-        "fill-color": "#0080ff",
-        "fill-opacity": 0.5
-    },
-    name="polygons"
+# 2. Add PMTiles Data (e.g. Polygons)
+# Efficiently serve massive datasets via Cloud Storage
+m.add_pmtiles(
+    "https://example.com/data.pmtiles",
+    layer_id="polygons",
+    layers=[{
+        "id": "polygon-fill",
+        "source": "polygons",
+        "source-layer": "source_layer_name",
+        "type": "fill",
+        "paint": {"fill-color": "#0080ff", "fill-opacity": 0.5}
+    }]
 )
+
+# 3. Export to Standalone HTML
+m.to_html("my_map.html", title="My Interactive Map")
 
 m
 ```
