@@ -33,7 +33,23 @@ If user has Miniconda/Anaconda:
 
 ## Coding Conventions
 
+### ipynb / jupyter notebooks
+
+We will mostly be writing in Jupyter Notebooks.  
+
+IMPORTANT: Coding conventions in Jupyter cells are different.  Try to avoid print statements in code cells,
+as cells automatically print their last line to the notebook.  Good cells are like good functions: concise,
+no more than a screen of code, output on the last line.  Ideally output is a chart, map, or table, all
+of which display nicely in notebooks.  
+
+Avoid verbose code comments - explanations of code belong in markdown cells with proper formatting etc.
+
+Avoid re-assigning the same variable to different values, especially across different cells as this increases
+risk of confusion or error if students run cells out of order.  
+
+
 ### Data Operations: Use Ibis
+
 We use **ibis** for data manipulation. Ibis provides a pandas-like API that compiles to DuckDB, enabling work with larger-than-RAM datasets.
 
 ```python
